@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>桃園環境監測地圖</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    .panel {
+      position: fixed;
+      top: 60px;
+      right: -400px;
+      width: 350px;
+      height: 80vh;
+      background: #fdfdfd;
+      border: 1px solid #ccc;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      padding: 15px;
+      overflow-y: auto;
+      transition: right 0.3s ease;
+      z-index: 1000;
+      border-radius: 12px;
+    }
+    .panel h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 2px solid #0077cc;
+      padding-bottom: 5px;
+      color: #0077cc;
+    }
+    .btn-toggle {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      z-index: 1001;
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      font-size: 1rem;
+      margin-left: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transition: background 0.2s;
+    }
+    .btn-toggle:hover {
+      background: #005fa3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #333;
+      font-weight: bold;
+    }
+    tr:hover {
+      background-color: #f9f9f9;
+    }
+    td {
+      color: #444;
+    }
+    #updateTime {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .circle {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 40px;
+      background-color: #e0e0e0;
+      color: #333;
+      font-weight: bold;
+      margin: 0 auto;
+    }
+    .good { background-color: #4CAF50; color: white; }
+    .moderate { background-color: #FFEB3B; color: black; }
+    .unhealthy { background-color: #FF5722; color: white; }
+    .hazardous { background-color: #9C27B0; color: white; }
+	 <!-- 引入 Axios，用於 API 請求 -->
+    
+  
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <button id="btn-air" class="btn-toggle" style="right: 150px;">空氣品質</button>
+  <button id="btn-water" class="btn-toggle">水質資料</button>
+  <button id="btn-cctv" class="btn-toggle" style="right: 280px;">CCTV</button>
+  <div id="panel-air" class="panel">
+    <h3>桃園測站空氣品質</h3>
+    <div id="updateTime">更新時間：--</div>
+    <table>
+      <thead><tr><th>項目</th><th>數值</th></tr></thead>
+      <tbody id="air-table"></tbody>
+    </table>
+  </div>
+
+  <div id="panel-water" class="panel">
+    <h3>南崁溪水質資料</h3>
+    <table>
+      <thead><tr><th>項目</th><th>數值</th></tr></thead>
+      <tbody id="water-table"></tbody>
+    </table>
+  </div>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([25.001, 121.312], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let airMarker = null;
+
+    function togglePanel(panelId) {
+      const panel = document.getElementById(panelId);
+      panel.style.right = panel.style.right === '20px' ? '-450px' : '20px';
+    }
+
+    document.getElementById("btn-air").onclick = () => togglePanel("panel-air");
+    document.getElementById("btn-water").onclick = () => togglePanel("panel-water");
+
+    const airAPI = "https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=477f0cbf-5bb3-4227-a115-c23b3ceb9e66";
+    const waterAPI = "https://data.moenv.gov.tw/api/v2/wqx_p_01?api_key=477f0cbf-5bb3-4227-a115-c23b3ceb9e66";
+	const apiUrl = "https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0002-001?Authorization=rdec-key-123-45678-011121314";
+    function getAQIStatus(aqi) {
+      if (aqi <= 50) {
+        return { status: "良好", class: "good" }; // 顏色類別
+      } else if (aqi <= 100) {
+        return { status: "普通", class: "moderate" };
+      } else if (aqi <= 150) {
+        return { status: "對敏感族群不健康", class: "unhealthy" };
+      } else if (aqi <= 200) {
+        return { status: "對所有族群不健康", class: "unhealthy" };
+      } else if (aqi <= 300) {
+        return { status: "非常不健康", class: "hazardous" };
+      } else {
+        return { status: "危害", class: "hazardous" };
+      }
+    }
+
+    function fetchAirData() {
+      fetch(airAPI)
+        .then(res => res.json())
+        .then(data => {
+          const taoyuanData = data.records.find(d => d.sitename === "桃園");
+          if (!taoyuanData) return;
+
+          document.getElementById("updateTime").textContent = `更新時間：${taoyuanData.publishtime}`;
+
+          const tbody = document.getElementById("air-table");
+          tbody.innerHTML = "";
+
+          const aqi = taoyuanData.aqi;
+          const { class: aqiClass, status: aqiStatus } = getAQIStatus(aqi);
+
+          // Add AQI and Status with color circle
+          const trAQI = document.createElement("tr");
+          trAQI.innerHTML = `<td>AQI</td><td><div class="circle-container"><div class="circle ${aqiClass}">${aqi}</div><div class="status">${aqiStatus}</div></div></td>`;
+          tbody.appendChild(trAQI);
+
+          const items = [
+            { label: "空氣污染指標物", value: taoyuanData.pollutant },
+            { label: "懸浮微粒 PM10 (μg/m³)", value: taoyuanData.pm10 },
+            { label: "細懸浮微粒 PM2.5 (μg/m³)", value: taoyuanData["pm2.5"] },
+            { label: "PM10 平均 (μg/m³)", value: taoyuanData.pm10_avg },
+            { label: "PM2.5 平均 (μg/m³)", value: taoyuanData["pm2.5_avg"] },
+            { label: "臭氧 O3 (ppb)", value: taoyuanData.o3 },
+            { label: "臭氧 O3 8小時 (ppb)", value: taoyuanData.o3_8hr },
+            { label: "一氧化碳 CO (ppm)", value: taoyuanData.co },
+            { label: "CO 8小時移動平均 (ppm)", value: taoyuanData.co_8hr },
+            { label: "二氧化硫 SO2 (ppb)", value: taoyuanData.so2 },
+            { label: "SO2 平均 (ppb)", value: taoyuanData.so2_avg },
+            { label: "二氧化氮 NO2 (ppb)", value: taoyuanData.no2 },
+            { label: "氮氧化物 NOx (ppb)", value: taoyuanData.nox },
+            { label: "一氧化氮 NO (ppb)", value: taoyuanData.no }
+          ];
+
+          items.forEach(item => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${item.label}</td><td>${item.value ?? '--'}</td>`;
+            tbody.appendChild(tr);
+          });
+
+          const lat = parseFloat(taoyuanData.latitude);
+          const lon = parseFloat(taoyuanData.longitude);
+
+          const popupContent = `
+            <strong>桃園測站</strong><br>
+            測站編號：${taoyuanData.siteid}<br>
+            經度：${taoyuanData.longitude}<br>
+            緯度：${taoyuanData.latitude}<br>
+            風速：${taoyuanData.wind_speed} m/s<br>
+            風向：${taoyuanData.wind_direc}°
+          `;
+		// 設定地圖點擊事件顯示經緯度
+			var popup = L.popup();
+			function onMapClick(e) {
+				popup
+					.setLatLng(e.latlng)
+					.setContent(`緯度：${e.latlng.lat}<br/>經度：${e.latlng.lng}`)
+					.openOn(map);
+			}
+			map.on('click', onMapClick);
+	
+          if (airMarker) map.removeLayer(airMarker);
+          airMarker = L.marker([lat, lon])
+            .addTo(map)
+            .bindPopup(popupContent);
+        })
+        .catch(err => console.error("空氣資料錯誤：", err));
+    }
+
+    function fetchWaterData() {
+      fetch(waterAPI)
+        .then(res => res.json())
+        .then(data => {
+          const filtered = data.records.filter(d => d.river === "南崁溪");
+          const grouped = {};
+          filtered.forEach(item => {
+            if (!grouped[item.siteid]) {
+              grouped[item.siteid] = {
+                siteid: item.siteid,
+                lat: parseFloat(item.twd97lat),
+                lon: parseFloat(item.twd97lon),
+                site: item.sitename,
+				siteeng: item.siteengname, // 👈 加這行
+                date: item.sampledate,
+                basin: item.basin,
+                river: item.river,
+                items: []
+              };
+            }
+            grouped[item.siteid].items.push({
+              name: item.itemname,
+              value: item.itemvalue,
+              unit: item.itemunit
+            });
+          });
+
+          const first = Object.values(grouped)[0];
+          if (first) {
+            const popupContent = `
+              <strong>${first.site} (${first.siteeng})</strong><br>
+              測站代碼：${first.siteid}<br>
+              採樣時間：${first.date}<br>
+              流域：${first.basin}<br>
+              河川：${first.river}
+            `;
+
+            L.marker([first.lat, first.lon])
+              .addTo(map)
+              .bindPopup(popupContent);
+
+            const tbody = document.getElementById("water-table");
+            tbody.innerHTML = "";
+            first.items.forEach(item => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `<td>${item.name}</td><td>${item.value} ${item.unit}</td>`;
+              tbody.appendChild(tr);
+            });
+          }
+        });
+    }
+	fetch(apiUrl)
+      .then(res => res.json())
+      .then(data => {
+        const stations = data.records.Station;
+
+        // 查找測站 "C0C480"
+        const targetStation = stations.find(station => station.StationId === "C0C480");
+
+        if (targetStation) {
+          const coords = targetStation.GeoInfo.Coordinates.find(c => c.CoordinateName === "WGS84");
+          if (!coords) return;
+
+          const lat = coords.StationLatitude;
+          const lng = coords.StationLongitude;
+
+          const name = targetStation.StationName;
+          const id = targetStation.StationId;
+          const maintainer = targetStation.Maintainer;
+          const coordinateName = coords.CoordinateName;
+          const coordinateFormat = coords.CoordinateFormat;
+          const altitude = targetStation.GeoInfo.StationAltitude || "N/A";
+          const nowRain = targetStation.RainfallElement.Now.Precipitation;
+          const past10minRain = targetStation.RainfallElement.Past10Min.Precipitation;
+          const hourRain = targetStation.RainfallElement.Past1hr.Precipitation;
+          const threeHourRain = targetStation.RainfallElement.Past3hr.Precipitation;
+          const sixHourRain = targetStation.RainfallElement.Past6Hr.Precipitation;
+          const twelveHourRain = targetStation.RainfallElement.Past12hr.Precipitation;
+          const dayRain = targetStation.RainfallElement.Past24hr.Precipitation;
+          const twoDayRain = targetStation.RainfallElement.Past2days.Precipitation;
+          const threeDayRain = targetStation.RainfallElement.Past3days.Precipitation;
+          const time = new Date(targetStation.ObsTime.DateTime).toLocaleString();
+          const countyName = targetStation.GeoInfo.CountyName;
+          const townName = targetStation.GeoInfo.TownName;
+          const countyCode = targetStation.GeoInfo.CountyCode;
+          const townCode = targetStation.GeoInfo.TownCode;
+
+          const popup = `
+            <div class="popup-content">
+              <strong>${name}</strong>（${id}）<br>
+              維護單位：${maintainer}<br>
+              座標系統：${coordinateName}（${coordinateFormat}）<br>
+              海拔：${altitude} m<br>
+              現在雨量：${nowRain} mm<br>
+              過去10分鐘雨量：${past10minRain} mm<br>
+              過去1小時雨量：${hourRain} mm<br>
+              過去3小時雨量：${threeHourRain} mm<br>
+              過去6小時雨量：${sixHourRain} mm<br>
+              過去12小時雨量：${twelveHourRain} mm<br>
+              過去24小時雨量：${dayRain} mm<br>
+              過去2天雨量：${twoDayRain} mm<br>
+              過去3天雨量：${threeDayRain} mm<br>
+              觀測時間：${time}<br>
+              所屬縣市：${countyName} ${townName}<br>
+              縣市代碼：${countyCode}，鄉鎮代碼：${townCode}
+            </div>
+          `;
+
+          L.marker([lat, lng]).addTo(map).bindPopup(popup);
+        }
+      })
+      .catch(err => {
+        console.error("資料載入失敗：", err);
+        alert("無法取得桃園區即時雨量資料！");
+      });
+
+    fetchAirData();
+    fetchWaterData();
+    setInterval(fetchAirData, 5 * 60 * 1000); // 每5分鐘更新一次空氣品質資料
+  
+   // 介接 TDX CCTV API
+	  const cctvLayer = L.layerGroup();
+	const cctvIcon = new L.Icon({
+	  iconUrl: 'https://cdn-icons-png.flaticon.com/512/3583/3583045.png',
+	  iconSize: [41, 41],
+	});
+	let cctvLoaded = false; // 是否已經載入過資料
+
+	// 加入一組 CCTV 清單到圖層（來源文字可選）
+	function addCCTVMarkers(cctvList, source = '') {
+	  for (let i = 0; i < cctvList.length; i++) {
+		const cctv = cctvList[i];
+		const imgTag = `<img src="${cctv.VideoStreamURL}" width="380" height="240"/>`;
+		const roadName = cctv.RoadName || '無資料';
+		const popupContent = `來源：${source}<br>路名：${roadName}<br>${imgTag}`;
+
+		const marker = L.marker([cctv.PositionLat, cctv.PositionLon], {
+		  icon: cctvIcon,
+		  title: 'CCTV',
+		  opacity: 1.0
+		}).bindPopup(popupContent, {
+		  maxWidth: "640",
+		  maxHeight: "480"
+		});
+
+		cctvLayer.addLayer(marker);
+	  }
+	}
+
+	// 主函式：同時抓市區 + 高速公路的資料
+	async function getCCTVData() {
+	  const cityUrl = 'https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/CCTV/City/Taoyuan?%24format=JSON';
+	  const highwayUrl = 'https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/CCTV/Highway?%24format=JSON';
+
+	  try {
+		const [cityRes, highwayRes] = await Promise.all([
+		  axios.get(cityUrl),
+		  axios.get(highwayUrl)
+		]);
+
+		addCCTVMarkers(cityRes.data.CCTVs, '桃園市區');
+		addCCTVMarkers(highwayRes.data.CCTVs, '高速公路');
+
+		cctvLoaded = true;
+	  } catch (error) {
+		console.error("取得 CCTV 資料失敗：", error);
+		alert("無法載入 CCTV 影像資料！");
+	  }
+	}
+
+	// 切換 CCTV 按鈕邏輯
+	document.getElementById("btn-cctv").onclick = () => {
+	  if (!cctvLoaded) {
+		getCCTVData();
+		map.addLayer(cctvLayer);
+	  } else {
+		if (map.hasLayer(cctvLayer)) {
+		  map.removeLayer(cctvLayer);
+		} else {
+		  map.addLayer(cctvLayer);
+		}
+	  }
+	};
+
+    getCCTVData();
+  </script>
+</body>
+</html>
