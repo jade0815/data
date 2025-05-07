@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>桃園市自行車站資料</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>  <!-- 引入 Axios -->
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    #map { height: 500px; width: 100%; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 14px; }
+    th { background-color: #f2f2f2; }
+    h1 { padding: 10px; background: #0078A8; color: white; margin: 0; }
+    .container { padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>桃園市自行車站資料</h1>
+  <div id="map"></div>
+  <div class="container">
+    <div id="bike-station-table">資料載入中...</div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([24.9934, 121.3009], 12); // 桃園中心點
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap 貢獻者'
+    }).addTo(map);
+
+    // 使用 Axios 來發送 API 請求
+    axios.get("https://tdx.transportdata.tw/api/basic/v2/Bike/Station/City/Taoyuan?%24format=JSON")
+      .then(response => {
+        const stationData = response.data;
+
+        // Fetch real-time bike availability data
+        axios.get("https://tdx.transportdata.tw/api/basic/v2/Bike/Availability/City/Taoyuan?%24format=JSON")
+          .then(availabilityResponse => {
+            const availabilityData = availabilityResponse.data;
+            let tableHTML = "<table><tr><th>站名</th><th>站點代碼</th><th>地址</th><th>可容納車輛數量</th><th>即時租借車輛數量</th><th>即時還車車輛數量</th><th>更新時間</th></tr>";
+
+            stationData.forEach(station => {
+              const name = station.StationName?.Zh_tw || "N/A";
+              const code = station.StationID || "N/A";
+              const address = station.StationAddress?.Zh_tw || "N/A";
+              const bikesCapacity = station.BikesCapacity || "N/A";
+              const updateTime = station.UpdateTime || "N/A";
+              const lat = station.StationPosition?.PositionLat || "N/A";
+              const lon = station.StationPosition?.PositionLon || "N/A";
+
+              // Find the availability data for the current station
+              const availability = availabilityData.find(avail => avail.StationID === station.StationID);
+              const availableRentBikes = availability ? availability.AvailableRentBikes : "N/A";
+              const availableReturnBikes = availability ? availability.AvailableReturnBikes : "N/A";
+              const availabilityUpdateTime = availability ? availability.UpdateTime : "N/A";
+
+              tableHTML += `<tr>
+                <td>${name}</td>
+                <td>${code}</td>
+                <td>${address}</td>
+                <td>${bikesCapacity}</td>
+                <td>${availableRentBikes}</td>
+                <td>${availableReturnBikes}</td>
+                <td>${availabilityUpdateTime}</td>
+              </tr>`;
+
+              // 顯示在地圖上
+              if (lat && lon) {
+                const marker = L.marker([lat, lon]).addTo(map);
+                marker.bindPopup(`
+                  <strong>${name}</strong><br>
+                  站點代碼：${code}<br>
+                  地址：${address}<br>
+                  可容納車輛數量：${bikesCapacity}<br>
+                  即時租借車輛數量：${availableRentBikes}<br>
+                  即時還車車輛數量：${availableReturnBikes}<br>
+                  更新時間：${availabilityUpdateTime}
+                `);
+              }
+            });
+
+            tableHTML += "</table>";
+            document.getElementById("bike-station-table").innerHTML = tableHTML;
+          })
+          .catch(error => {
+            console.error("讀取即時車位資料錯誤：", error);
+            document.getElementById("bike-station-table").textContent = "無法載入即時車位資料。";
+          });
+      })
+      .catch(error => {
+        console.error("讀取自行車站資料錯誤：", error);
+        document.getElementById("bike-station-table").textContent = "無法載入自行車站資料。";
+      });
+  </script>
+</body>
+</html>
