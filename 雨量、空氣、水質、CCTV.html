@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>火柴人動畫</title>
+  <title>火柴人移動與開始按鈕</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
   <style>
     body {
@@ -13,43 +13,124 @@
       align-items: center;
       height: 100vh;
       background-color: transparent;
+      position: relative;
     }
     canvas {
       display: block;
     }
+    #startButton {
+      position: absolute;
+      top: 60%;
+      left: 60%;
+      transform: translate(-50%, -50%);
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      transition: transform 0.1s ease; /* 平滑過渡效果 */
+    }
   </style>
 </head>
 <body>
+  <button id="startButton" onclick="startAnimation()">開始</button>
   <script>
+    let fireX = 100, fireY = 150; // 火柴人的起始位置
+    let targetX = 300, targetY = 200; // 目標按鈕的位置
+    let isMoving = false;  // 火柴人是否正在移動
+    let handX, handY;  // 右手的座標
+    let isButtonClicked = false; // 是否按下了按鈕
+    let isHandTouchingButton = false; // 右手是否接觸按鈕
+    let isPersonClicked = false; // 是否點擊了火柴人
+
     function setup() {
       createCanvas(400, 300);
       angleMode(DEGREES);
-      clear();  // 確保背景透明
+      handX = fireX + 30;
+      handY = fireY - 20;
     }
 
     function draw() {
       clear();  // 每一幀清除背景
 
-      let centerX = 200;
-      let centerY = 150;
-
+      // 畫火柴人
       stroke(0);
       fill(255);
-      ellipse(centerX, centerY - 40, 30, 30); // 頭部
+      ellipse(fireX, fireY - 40, 30, 30); // 頭部
 
-      line(centerX, centerY - 25, centerX, centerY + 30); // 身體
+      line(fireX, fireY - 25, fireX, fireY + 30); // 身體
 
-      line(centerX, centerY + 30, centerX - 20, centerY + 60); // 左腿
-      line(centerX, centerY + 30, centerX + 20, centerY + 60); // 右腿
+      line(fireX, fireY + 30, fireX - 20, fireY + 60); // 左腿
+      line(fireX, fireY + 30, fireX + 20, fireY + 60); // 右腿
 
-      line(centerX, centerY, centerX - 30, centerY - 20); // 左手
+      line(fireX, fireY, fireX - 30, fireY - 20); // 左手
 
+      // 當火柴人接近按鈕時，右手伸出
       push();
-      translate(centerX, centerY);
+      translate(fireX, fireY);
+
+      // 當手接觸按鈕時，火柴人做出按鈕點擊的動作
       let waveAngle = sin(frameCount * 5) * 30; // 揮手角度
+
+      if (isHandTouchingButton) {
+        // 模擬點擊手指的動作
+        waveAngle = 45; // 手指伸直，模擬點擊
+      }
+
       rotate(waveAngle);
       line(0, 0, 30, -20); // 右手
       pop();
+
+      // 火柴人移動至目標按鈕
+      if (isMoving) {
+        let angleToTarget = atan2(targetY - fireY, targetX - fireX);
+        fireX += cos(angleToTarget) * 2; // 火柴人移動速度
+        fireY += sin(angleToTarget) * 2;
+
+        // 當火柴人接近按鈕時，停止移動並開始觸發點擊按鈕
+        if (dist(fireX, fireY, targetX, targetY) < 10) {
+          isMoving = false;
+          isHandTouchingButton = true;  // 火柴人手接觸按鈕
+          startButtonClick();  // 火柴人接觸按鈕後點擊
+        }
+      }
+
+      // 當按鈕被點擊時，持續壓縮並彈回
+      if (isButtonClicked) {
+        // 按鈕縮放效果：持續壓縮並彈回
+        let scaleAmount = 0.9 + 0.1 * sin(frameCount * 10); // 控制縮放效果
+        select('#startButton').style('transform', `translate(-50%, -50%) scale(${scaleAmount})`);
+      }
+    }
+
+    // 點擊事件：開始按鈕的觸發
+    function startAnimation() {
+      // 按鈕被點擊後，開始移動火柴人
+      if (isPersonClicked) {
+        isMoving = true;
+      }
+    }
+
+    // 點擊火柴人觸發移動
+    function mousePressed() {
+      // 檢查是否點擊了火柴人
+      let d = dist(mouseX, mouseY, fireX, fireY);
+      if (d < 30) {
+        isPersonClicked = true;  // 設定火柴人被點擊
+        isMoving = true;  // 開始火柴人移動
+      }
+    }
+
+    // 模擬點擊按鈕
+    function startButtonClick() {
+      // 讓按鈕持續壓縮並彈回
+      isButtonClicked = true;
+
+      // 持續壓縮與彈回的效果
+      setInterval(() => {
+        isButtonClicked = true;
+      }, 100); // 每100ms進行一次更新，保持持續壓縮和彈回
     }
   </script>
 </body>
