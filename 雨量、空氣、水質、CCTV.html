@@ -114,7 +114,7 @@
   <button id="btn-water" class="btn-toggle">水質資料</button>
   <button id="btn-cctv" class="btn-toggle" style="right: 280px;">CCTV</button>
   <div id="panel-air" class="panel">
-    <h3>桃園測站空氣品質</h3>
+    <h3>臺南測站空氣品質</h3>
     <div id="updateTime">更新時間：--</div>
     <table>
       <thead><tr><th>項目</th><th>數值</th></tr></thead>
@@ -132,7 +132,7 @@
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([25.001, 121.312], 15);
+    const map = L.map('map').setView([22.9977, 120.2121], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let airMarker = null;
@@ -168,15 +168,15 @@
       fetch(airAPI)
         .then(res => res.json())
         .then(data => {
-          const taoyuanData = data.records.find(d => d.sitename === "桃園");
-          if (!taoyuanData) return;
+          const tainanData = data.records.find(d => d.sitename === "臺南");
+          if (!tainanData) return;
 
-          document.getElementById("updateTime").textContent = `更新時間：${taoyuanData.publishtime}`;
+          document.getElementById("updateTime").textContent = `更新時間：${tainanData.publishtime}`;
 
           const tbody = document.getElementById("air-table");
           tbody.innerHTML = "";
 
-          const aqi = taoyuanData.aqi;
+          const aqi = tainanData.aqi;
           const { class: aqiClass, status: aqiStatus } = getAQIStatus(aqi);
 
           // Add AQI and Status with color circle
@@ -185,20 +185,20 @@
           tbody.appendChild(trAQI);
 
           const items = [
-            { label: "空氣污染指標物", value: taoyuanData.pollutant },
-            { label: "懸浮微粒 PM10 (μg/m³)", value: taoyuanData.pm10 },
-            { label: "細懸浮微粒 PM2.5 (μg/m³)", value: taoyuanData["pm2.5"] },
-            { label: "PM10 平均 (μg/m³)", value: taoyuanData.pm10_avg },
-            { label: "PM2.5 平均 (μg/m³)", value: taoyuanData["pm2.5_avg"] },
-            { label: "臭氧 O3 (ppb)", value: taoyuanData.o3 },
-            { label: "臭氧 O3 8小時 (ppb)", value: taoyuanData.o3_8hr },
-            { label: "一氧化碳 CO (ppm)", value: taoyuanData.co },
-            { label: "CO 8小時移動平均 (ppm)", value: taoyuanData.co_8hr },
-            { label: "二氧化硫 SO2 (ppb)", value: taoyuanData.so2 },
-            { label: "SO2 平均 (ppb)", value: taoyuanData.so2_avg },
-            { label: "二氧化氮 NO2 (ppb)", value: taoyuanData.no2 },
-            { label: "氮氧化物 NOx (ppb)", value: taoyuanData.nox },
-            { label: "一氧化氮 NO (ppb)", value: taoyuanData.no }
+            { label: "空氣污染指標物", value: tainanData.pollutant },
+            { label: "懸浮微粒 PM10 (μg/m³)", value: tainanData.pm10 },
+            { label: "細懸浮微粒 PM2.5 (μg/m³)", value: tainanData["pm2.5"] },
+            { label: "PM10 平均 (μg/m³)", value: tainanData.pm10_avg },
+            { label: "PM2.5 平均 (μg/m³)", value: tainanData["pm2.5_avg"] },
+            { label: "臭氧 O3 (ppb)", value: tainanData.o3 },
+            { label: "臭氧 O3 8小時 (ppb)", value: tainanData.o3_8hr },
+            { label: "一氧化碳 CO (ppm)", value: tainanData.co },
+            { label: "CO 8小時移動平均 (ppm)", value: tainanData.co_8hr },
+            { label: "二氧化硫 SO2 (ppb)", value: tainanData.so2 },
+            { label: "SO2 平均 (ppb)", value: tainanData.so2_avg },
+            { label: "二氧化氮 NO2 (ppb)", value: tainanData.no2 },
+            { label: "氮氧化物 NOx (ppb)", value: tainanData.nox },
+            { label: "一氧化氮 NO (ppb)", value: tainanData.no }
           ];
 
           items.forEach(item => {
@@ -207,16 +207,16 @@
             tbody.appendChild(tr);
           });
 
-          const lat = parseFloat(taoyuanData.latitude);
-          const lon = parseFloat(taoyuanData.longitude);
+          const lat = parseFloat(tainanData.latitude);
+          const lon = parseFloat(tainanData.longitude);
 
           const popupContent = `
-            <strong>桃園測站</strong><br>
-            測站編號：${taoyuanData.siteid}<br>
-            經度：${taoyuanData.longitude}<br>
-            緯度：${taoyuanData.latitude}<br>
-            風速：${taoyuanData.wind_speed} m/s<br>
-            風向：${taoyuanData.wind_direc}°
+            <strong>臺南測站</strong><br>
+            測站編號：${tainanData.siteid}<br>
+            經度：${tainanData.longitude}<br>
+            緯度：${tainanData.latitude}<br>
+            風速：${tainanData.wind_speed} m/s<br>
+            風向：${tainanData.wind_direc}°
           `;
 		// 設定地圖點擊事件顯示經緯度
 			var popup = L.popup();
