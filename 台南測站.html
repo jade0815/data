@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>台南環境監測地圖</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    .panel {
+      position: fixed;
+      top: 60px;
+      right: -400px;
+      width: 350px;
+      height: 80vh;
+      background: #fdfdfd;
+      border: 1px solid #ccc;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      padding: 15px;
+      overflow-y: auto;
+      transition: right 0.3s ease;
+      z-index: 1000;
+      border-radius: 12px;
+    }
+    .panel h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 2px solid #0077cc;
+      padding-bottom: 5px;
+      color: #0077cc;
+    }
+    .btn-toggle {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      z-index: 1001;
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      font-size: 1rem;
+      margin-left: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transition: background 0.2s;
+    }
+    .btn-toggle:hover {
+      background: #005fa3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #333;
+      font-weight: bold;
+    }
+    tr:hover {
+      background-color: #f9f9f9;
+    }
+    td {
+      color: #444;
+    }
+    #updateTime {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .circle {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 40px;
+      background-color: #e0e0e0;
+      color: #333;
+      font-weight: bold;
+      margin: 0 auto;
+    }
+    .good { background-color: #4CAF50; color: white; }
+    .moderate { background-color: #FFEB3B; color: black; }
+    .unhealthy { background-color: #FF5722; color: white; }
+    .hazardous { background-color: #9C27B0; color: white; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <button id="btn-air" class="btn-toggle" style="right: 150px;">空氣品質</button>
+  <div id="panel-air" class="panel">
+    <h3>台南測站空氣品質</h3>
+    <div id="updateTime">更新時間：--</div>
+    <table>
+      <thead><tr><th>項目</th><th>數值</th></tr></thead>
+      <tbody id="air-table"></tbody>
+    </table>
+  </div>
+
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([22.9999, 120.2270], 15);  // Tainan coordinates
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let airMarker = null;
+
+    function togglePanel(panelId) {
+      const panel = document.getElementById(panelId);
+      panel.style.right = panel.style.right === '20px' ? '-450px' : '20px';
+    }
+
+    document.getElementById("btn-air").onclick = () => togglePanel("panel-air");
+
+    const airAPI = "https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=477f0cbf-5bb3-4227-a115-c23b3ceb9e66";
+
+    function getAQIStatus(aqi) {
+      if (aqi <= 50) {
+        return { status: "良好", class: "good" };
+      } else if (aqi <= 100) {
+        return { status: "普通", class: "moderate" };
+      } else if (aqi <= 150) {
+        return { status: "對敏感族群不健康", class: "unhealthy" };
+      } else if (aqi <= 200) {
+        return { status: "對所有族群不健康", class: "unhealthy" };
+      } else if (aqi <= 300) {
+        return { status: "非常不健康", class: "hazardous" };
+      } else {
+        return { status: "危害", class: "hazardous" };
+      }
+    }
+
+    function fetchAirData() {
+      fetch(airAPI)
+        .then(res => res.json())
+        .then(data => {
+          const tainanData = data.records.find(d => d.sitename === "臺南");  // Change to Tainan
+          if (!tainanData) return;
+
+          document.getElementById("updateTime").textContent = `更新時間：${tainanData.publishtime}`;
+
+          const tbody = document.getElementById("air-table");
+          tbody.innerHTML = "";
+
+          const aqi = tainanData.aqi;
+          const { class: aqiClass, status: aqiStatus } = getAQIStatus(aqi);
+
+          // Add AQI and Status with color circle
+          const trAQI = document.createElement("tr");
+          trAQI.innerHTML = `<td>AQI</td><td><div class="circle-container"><div class="circle ${aqiClass}">${aqi}</div><div class="status">${aqiStatus}</div></div></td>`;
+          tbody.appendChild(trAQI);
+
+          const items = [
+            { label: "空氣污染指標物", value: tainanData.pollutant },
+            { label: "懸浮微粒 PM10 (μg/m³)", value: tainanData.pm10 },
+            { label: "細懸浮微粒 PM2.5 (μg/m³)", value: tainanData["pm2.5"] },
+            { label: "PM10 平均 (μg/m³)", value: tainanData.pm10_avg },
+            { label: "PM2.5 平均 (μg/m³)", value: tainanData["pm2.5_avg"] },
+            { label: "臭氧 O3 (ppb)", value: tainanData.o3 },
+            { label: "臭氧 O3 8小時 (ppb)", value: tainanData.o3_8hr },
+            { label: "一氧化碳 CO (ppm)", value: tainanData.co },
+            { label: "CO 8小時移動平均 (ppm)", value: tainanData.co_8hr },
+            { label: "二氧化硫 SO2 (ppb)", value: tainanData.so2 },
+            { label: "SO2 平均 (ppb)", value: tainanData.so2_avg },
+            { label: "二氧化氮 NO2 (ppb)", value: tainanData.no2 },
+            { label: "氮氧化物 NOx (ppb)", value: tainanData.nox },
+            { label: "一氧化氮 NO (ppb)", value: tainanData.no }
+          ];
+
+          items.forEach(item => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${item.label}</td><td>${item.value ?? '--'}</td>`;
+            tbody.appendChild(tr);
+          });
+
+          const lat = parseFloat(tainanData.latitude);
+          const lon = parseFloat(tainanData.longitude);
+
+          const popupContent = `
+            <strong>台南測站</strong><br>
+            測站編號：${tainanData.siteid}<br>
+            經度：${tainanData.longitude}<br>
+            緯度：${tainanData.latitude}<br>
+            空氣品質指數 (AQI)：${aqi}<br>
+            空氣品質：${aqiStatus}
+          `;
+
+          if (!airMarker) {
+            airMarker = L.marker([lat, lon]).addTo(map);
+          } else {
+            airMarker.setLatLng([lat, lon]);
+          }
+          airMarker.bindPopup(popupContent).openPopup();
+        })
+        .catch(err => console.error('Air data fetch error:', err));
+    }
+
+    setInterval(fetchAirData, 300000); // Refresh every 5 minutes
+    fetchAirData(); // Initial fetch
+  </script>
+</body>
+</html>
