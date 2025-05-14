@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>更新時間</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    /* 創建 iframe 容器 */
+    .iframe-container {
+      width: 50%;
+      height: 1000px;  /* 設置顯示區域的高度 */
+      position: relative;
+      overflow: hidden;  /* 隱藏超出範圍的部分 */
+	  
+    }
+
+    /* iframe 裁切並定位 */
+    iframe {
+      width: 100%;
+      height: 35%;
+      border: none;
+      position: absolute;
+      top: -300px;  /* 調整此值，裁切上方區域 */
+      left: 0;
+      transform: scale(1.0);  /* 控制縮放以適應顯示 */
+    }
+  </style>
+</head>
+<body>
+
+  <div class="iframe-container">
+    <iframe src="https://apss.oga.ncku.edu.tw/park/"></iframe>
+  </div>
+
+</body>
+</html>
