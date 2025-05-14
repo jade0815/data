@@ -16,9 +16,25 @@
             height: 100vh;
         }
 
+        /* 顯示最新時間的 iframe 樣式 */
+        .iframe-time {
+            position: absolute;
+            top: 0px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 60%;
+            max-width: 500px;
+            height: 36px;
+            border: 2px solid #888;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        /* 按鈕區域樣式 */
         .button-container {
             position: absolute;
-            top: 20px;
+            top: 100px;  /* 從 iframe-time 下方開始 */
             right: 20px;
             z-index: 1000;
             background-color: rgba(255, 255, 255, 0.95);
@@ -96,6 +112,12 @@
 </head>
 <body>
     <div id="map"></div>
+
+    <!-- 顯示最新時間的 iframe -->
+    <div class="iframe-time">
+        <iframe src="https://jade0815.github.io/data/%E6%9B%B4%E6%96%B0%E6%99%82%E9%96%93.html"
+                width="100%" height="70" style="border:2px solid #888; overflow:hidden;" scrolling="no"></iframe>
+    </div>
 
     <!-- 停車場選擇按鈕 -->
     <div class="button-container">
