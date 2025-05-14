@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>高雄市路面停車場地圖</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+
+        .button-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .button-container h4 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #333;
+            text-align: center;
+        }
+
+        .button-container button {
+            display: block;
+            width: 180px;
+            margin: 6px auto;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .button-container button:hover {
+            background-color: #45a049;
+            transform: scale(1.03);
+        }
+
+        /* iframe樣式 - 讓框架變成更現代的視覺效果 */
+        .iframe-tumu, .iframe-xinyuan {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 425px;  /* 調整寬度 */
+            height: 80px;  /* 調整高度 */
+            border: 3px solid #87CEFA;  /* 藍色邊框 */
+            border-radius: 15px;  /* 更大的圓角邊框 */
+            background: linear-gradient(135deg, #007BFF, #00BFFF);  /* 漸變背景 */
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);  /* 柔和陰影 */
+            display: none;  /* 預設隱藏 */
+            opacity: 0;  /* 初始為透明 */
+            transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;  /* 加入過渡效果 */
+            transform: translateY(20px);  /* 略微向下偏移 */
+        }
+
+        .iframe-tumu iframe, .iframe-xinyuan iframe {
+            width: 100%;
+            height: 100%;
+            border-radius: 15px;  /* 與外框一致的圓角 */
+        }
+
+        /* 顯示時的過渡效果 */
+        .iframe-tumu.show, .iframe-xinyuan.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);  /* 顯示時回到原位 */
+        }
+
+        /* 彈性動畫效果 */
+        .iframe-tumu.show {
+            box-shadow: 0 6px 25px rgba(0, 123, 255, 0.3);  /* 顯示時加入陰影強度 */
+        }
+
+        .iframe-xinyuan.show {
+            box-shadow: 0 6px 25px rgba(0, 123, 255, 0.3);  /* 顯示時加入陰影強度 */
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- 停車場選擇按鈕 -->
+    <div class="button-container">
+        <h4>選擇停車場</h4>
+        <button onclick="highlightMarker('土木平面停車場')">土木平面停車場</button>
+        <button onclick="highlightMarker('新園平面機車停車場')">新園平面機車停車場</button>
+    </div>
+
+    <!-- 土木 iframe（右下角） -->
+    <div class="iframe-tumu" id="tumuIframe">
+        <iframe src="https://jade0815.github.io/data/%E5%9C%9F%E6%9C%A8.html" scrolling="no"></iframe>
+    </div>
+
+    <!-- 新園 iframe（右下角） -->
+    <div class="iframe-xinyuan" id="xinyuanIframe">
+        <iframe src="https://jade0815.github.io/data/ncku-parking-embed.html" scrolling="no"></iframe>
+    </div>
+
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([22.9987, 120.2202], 18);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap 貢獻者'
+        }).addTo(map);
+
+        var parkingData = [
+            {
+                name: "土木平面停車場",
+                lat: 22.998959,
+                lng: 120.221993,
+                hours: "24hr",
+                total: 62
+            },
+            {
+                name: "新園平面機車停車場",
+                lat: 22.998494,
+                lng: 120.218414,
+                hours: "24hr",
+                total: 114
+            }
+        ];
+
+        var markers = {};
+        var glowLayer = null;
+        var activePopup = null;  // 追蹤當前打開的popup
+
+        parkingData.forEach(function(p) {
+            var marker = L.marker([p.lat, p.lng])
+                .addTo(map)
+                .bindPopup(`<strong>${p.name}</strong><br>營業時間：${p.hours}<br>總車位數：${p.total}`);
+            markers[p.name] = {
+                marker: marker,
+                latlng: [p.lat, p.lng]
+            };
+        });
+
+        function highlightMarker(name) {
+            if (!markers[name]) return;
+
+            var markerData = markers[name];
+
+            // 顯示或隱藏該停車場的 popup
+            if (activePopup === markerData.marker._popup) {
+                markerData.marker.closePopup();  // 隱藏 popup
+                activePopup = null;
+            } else {
+                markerData.marker.openPopup();   // 顯示 popup
+                activePopup = markerData.marker._popup;
+            }
+
+            // 控制 glow 圓圈顯示/隱藏
+            if (glowLayer) {
+                map.removeLayer(glowLayer); // 移除之前的 glow
+            }
+
+            glowLayer = L.circleMarker(markerData.latlng, {
+                radius: 20,
+                color: 'lime',
+                weight: 4,
+                fillColor: 'lime',
+                fillOpacity: 0.3
+            }).addTo(map);
+
+            // 控制 iframe 顯示/隱藏
+            var iframeTumu = document.getElementById("tumuIframe");
+            var iframeXinyuan = document.getElementById("xinyuanIframe");
+
+            if (name === "土木平面停車場") {
+                // 如果是點擊同一個按鈕，則隱藏
+                if (iframeTumu.classList.contains("show")) {
+                    iframeTumu.classList.remove("show");
+                    map.removeLayer(glowLayer);  // 隱藏 glow
+                    activePopup = null;  // 隱藏popup
+                } else {
+                    iframeTumu.classList.add("show");
+                    iframeXinyuan.classList.remove("show");  // 隱藏新園
+                    map.setView(markerData.latlng, 19);
+                }
+            } else if (name === "新園平面機車停車場") {
+                // 如果是點擊同一個按鈕，則隱藏
+                if (iframeXinyuan.classList.contains("show")) {
+                    iframeXinyuan.classList.remove("show");
+                    map.removeLayer(glowLayer);  // 隱藏 glow
+                    activePopup = null;  // 隱藏popup
+                } else {
+                    iframeXinyuan.classList.add("show");
+                    iframeTumu.classList.remove("show");  // 隱藏土木
+                    map.setView(markerData.latlng, 19);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
