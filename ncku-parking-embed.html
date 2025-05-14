@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>成大停車即時資訊裁切版</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #fff;
+    }
+    .iframe-container {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+    }
+    iframe {
+      width: 1920px;
+      height: 1080px;
+      border: none;
+      position: absolute;
+      top: -180px;  /* 裁掉上方區域（調整這個值可改裁切範圍） */
+      left: 0;
+      transform: scale(0.75);  /* 控制整體縮放以適應畫面 */
+      transform-origin: top left;
+    }
+  </style>
+</head>
+<body>
+  <div class="iframe-container">
+    <iframe src="https://apss.oga.ncku.edu.tw/park/"></iframe>
+  </div>
+</body>
+</html>
