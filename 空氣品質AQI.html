@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>台南 AQI 指數</title>
+  <title>AQI 小框超精簡版</title>
   <style>
     body {
       margin: 0;
@@ -12,42 +12,44 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background-color: #f5f5f5;
+      background-color: #f0f0f0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     .aqi-box {
+      transform: scale(0.75);
+      transform-origin: top center;
       background: #fff;
       border: 1px solid #ccc;
-      border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-      padding: 12px;
-      width: 160px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 8px;
+      width: 120px;
       text-align: center;
     }
     .aqi-box h3 {
-      margin: 0 0 8px;
-      font-size: 0.95rem;
+      margin: 0 0 5px;
+      font-size: 0.85rem;
       color: #0077cc;
     }
     .circle {
-      width: 50px;
-      height: 50px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      line-height: 50px;
+      line-height: 40px;
       text-align: center;
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: bold;
-      margin: 0 auto 5px;
+      margin: 0 auto 3px;
       color: white;
     }
     .status {
-      font-size: 0.9rem;
+      font-size: 0.75rem;
       font-weight: bold;
     }
     .time {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: #666;
-      margin-top: 6px;
+      margin-top: 4px;
     }
     .good { background-color: #4CAF50; }
     .moderate { background-color: #FFEB3B; color: black; }
@@ -57,11 +59,11 @@
 </head>
 <body>
   <div class="aqi-box">
-    <h3>台南 AQI</h3>
+    <h3>AQI 台南</h3>
     <div id="aqiDisplay">
       <div class="circle">--</div>
       <div class="status">--</div>
-      <div class="time">更新時間：--</div>
+      <div class="time">--</div>
     </div>
   </div>
 
@@ -91,14 +93,14 @@
           display.innerHTML = `
             <div class="circle ${aqiClass}">${aqi}</div>
             <div class="status">${status}</div>
-            <div class="time">更新時間：${tainanData.publishtime}</div>
+            <div class="time">${tainanData.publishtime}</div>
           `;
         })
         .catch(err => console.error("AQI fetch error:", err));
     }
 
     fetchAQI();
-    setInterval(fetchAQI, 300000); // 每五分鐘更新一次
+    setInterval(fetchAQI, 300000); // 每 5 分鐘更新一次
   </script>
 </body>
 </html>
