@@ -23,13 +23,23 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       padding: 8px;
-      width: 120px;
+      width: 200px;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
-    .aqi-box h3 {
-      margin: 0 0 5px;
-      font-size: 0.85rem;
-      color: #0077cc;
+    .aqi-box .time {
+      font-size: 0.6rem;
+      color: #666;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .aqi-box .status {
+      font-size: 0.75rem;
+      font-weight: bold;
     }
     .circle {
       width: 40px;
@@ -42,15 +52,6 @@
       margin: 0 auto 3px;
       color: white;
     }
-    .status {
-      font-size: 0.75rem;
-      font-weight: bold;
-    }
-    .time {
-      font-size: 0.7rem;
-      color: #666;
-      margin-top: 4px;
-    }
     .good { background-color: #4CAF50; }
     .moderate { background-color: #FFEB3B; color: black; }
     .unhealthy { background-color: #FF5722; }
@@ -59,12 +60,9 @@
 </head>
 <body>
   <div class="aqi-box">
-    <h3>AQI 台南</h3>
-    <div id="aqiDisplay">
-      <div class="circle">--</div>
-      <div class="status">--</div>
-      <div class="time">--</div>
-    </div>
+    <div class="time" id="aqi-time">--</div>
+    <div class="circle" id="aqi-circle">--</div>
+    <div class="status" id="aqi-status">--</div>
   </div>
 
   <script>
@@ -89,12 +87,13 @@
           const aqi = parseInt(tainanData.aqi);
           const { status, class: aqiClass } = getAQIStatus(aqi);
 
-          const display = document.getElementById("aqiDisplay");
-          display.innerHTML = `
-            <div class="circle ${aqiClass}">${aqi}</div>
-            <div class="status">${status}</div>
-            <div class="time">${tainanData.publishtime}</div>
-          `;
+          // 更新顯示
+          document.getElementById("aqi-time").textContent = `更新時間：${tainanData.publishtime}`;
+          document.getElementById("aqi-circle").textContent = aqi;
+          document.getElementById("aqi-status").textContent = status;
+
+          const circleElement = document.getElementById("aqi-circle");
+          circleElement.className = `circle ${aqiClass}`;
         })
         .catch(err => console.error("AQI fetch error:", err));
     }
