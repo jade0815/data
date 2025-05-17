@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>台南 AQI 指數</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f5f5f5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .aqi-box {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+      padding: 12px;
+      width: 160px;
+      text-align: center;
+    }
+    .aqi-box h3 {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      color: #0077cc;
+    }
+    .circle {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      line-height: 50px;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin: 0 auto 5px;
+      color: white;
+    }
+    .status {
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+    .time {
+      font-size: 0.75rem;
+      color: #666;
+      margin-top: 6px;
+    }
+    .good { background-color: #4CAF50; }
+    .moderate { background-color: #FFEB3B; color: black; }
+    .unhealthy { background-color: #FF5722; }
+    .hazardous { background-color: #9C27B0; }
+  </style>
+</head>
+<body>
+  <div class="aqi-box">
+    <h3>台南 AQI</h3>
+    <div id="aqiDisplay">
+      <div class="circle">--</div>
+      <div class="status">--</div>
+      <div class="time">更新時間：--</div>
+    </div>
+  </div>
+
+  <script>
+    const airAPI = "https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=477f0cbf-5bb3-4227-a115-c23b3ceb9e66";
+
+    function getAQIStatus(aqi) {
+      if (aqi <= 50) return { status: "良好", class: "good" };
+      if (aqi <= 100) return { status: "普通", class: "moderate" };
+      if (aqi <= 150) return { status: "對敏感族群不健康", class: "unhealthy" };
+      if (aqi <= 200) return { status: "對所有族群不健康", class: "unhealthy" };
+      if (aqi <= 300) return { status: "非常不健康", class: "hazardous" };
+      return { status: "危害", class: "hazardous" };
+    }
+
+    function fetchAQI() {
+      fetch(airAPI)
+        .then(res => res.json())
+        .then(data => {
+          const tainanData = data.records.find(d => d.sitename === "臺南");
+          if (!tainanData) return;
+
+          const aqi = parseInt(tainanData.aqi);
+          const { status, class: aqiClass } = getAQIStatus(aqi);
+
+          const display = document.getElementById("aqiDisplay");
+          display.innerHTML = `
+            <div class="circle ${aqiClass}">${aqi}</div>
+            <div class="status">${status}</div>
+            <div class="time">更新時間：${tainanData.publishtime}</div>
+          `;
+        })
+        .catch(err => console.error("AQI fetch error:", err));
+    }
+
+    fetchAQI();
+    setInterval(fetchAQI, 300000); // 每五分鐘更新一次
+  </script>
+</body>
+</html>
