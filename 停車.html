@@ -22,7 +22,8 @@
             position: absolute;
             top: 0px;
             left: 50%;
-            transform: translateX(-50%);
+			transform: translateX(-50%) scale(1.5);  /* 加入 scale */
+			transform-origin: top center;            /* 縮放基準為上方中央 */
             z-index: 1000;
             width: 60%;
             max-width: 500px;
@@ -43,7 +44,7 @@
             padding: 12px;
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-			transform: scale(1.2); /* 放大整體 1.2 倍，可調整 */
+			transform: scale(1.5); /* 放大整體 1.2 倍，可調整 */
             transform-origin: top right; /* 從左上角縮放，避免跑版 */
         }
 
@@ -89,6 +90,8 @@
             opacity: 0;  /* 初始為透明 */
             transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;  /* 加入過渡效果 */
             transform: translateY(20px);  /* 略微向下偏移 */
+			transform: scale(1.5) translateY(20px); /* 放大 1.5 倍，可調整倍率 */
+			transform-origin: bottom right; /* 從右下角放大，避免跑版 */
         }
 
         .iframe-tumu iframe, .iframe-xinyuan iframe {
@@ -112,6 +115,22 @@
         .iframe-xinyuan.show {
             box-shadow: 0 6px 25px rgba(0, 123, 255, 0.3);  /* 顯示時加入陰影強度 */
         }
+		
+		.leaflet-popup-content {
+			font-size: 20px;     /* 放大文字 */
+			line-height: 1.6;
+		}
+
+		.leaflet-popup-content-wrapper {
+			padding: 15px;       /* 加大內距 */
+			font-size: 20px;     /* 這裡也可以加大保險 */
+		}
+
+		.leaflet-popup-tip {
+			width: 20px;
+			height: 10px;
+		}
+
     </style>
 </head>
 <body>
@@ -143,7 +162,7 @@
     <!-- Leaflet -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        var map = L.map('map').setView([22.9987, 120.2202], 18);
+        var map = L.map('map').setView([22.9987, 120.2202], 20);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap 貢獻者'
@@ -171,7 +190,14 @@
         var activePopup = null;  // 追蹤當前打開的popup
 
         parkingData.forEach(function(p) {
-            var marker = L.marker([p.lat, p.lng])
+			var largeIcon = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
+    iconSize: [50, 82],       // ← 放大 marker 圖示
+    iconAnchor: [25, 82],     // ← 底部對準座標
+    popupAnchor: [0, -82]     // ← Popup 顯示在上方
+});
+
+            var marker = L.marker([p.lat, p.lng], { icon: largeIcon })
                 .addTo(map)
                 .bindPopup(`<strong>${p.name}</strong><br>營業時間：${p.hours}<br>總車位數：${p.total}`);
             markers[p.name] = {
