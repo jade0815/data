@@ -27,9 +27,10 @@
       height: 35%;
       border: none;
       position: absolute;
-      top: -300px;  /* 調整此值，裁切上方區域 */
+      top: -360px;  /* 調整此值，裁切上方區域 */
       left: 0;
-      transform: scale(1.0);  /* 控制縮放以適應顯示 */
+      transform: scale(1.2); /* ✅ 放大倍率，例如 1.2 是放大 20% */
+	  transform-origin: top center; /* ✅ 固定放大時的錨點位置 */
     }
   </style>
 </head>
