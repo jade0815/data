@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>天氣 + AQI 小框</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: transparent;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 主要容器：背景透明，邊框粗細跟顏色由 JS 動態設定 */
+    .weather-aqi-box {
+      display: flex;
+      gap: 1em;
+      align-items: center;
+      background:linear-gradient(to right, #e0f7fa, #f1f8e9);
+      padding: 0.3em 1.6em;
+      border-radius: 20px;
+      font-size: 1em;
+      max-width: 600px;
+      box-sizing: border-box;
+	  
+
+      border: 4px solid transparent; /* 初始透明 */
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      user-select: none;
+    }
+
+    .item {
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.3em;
+      color: #222;
+      font-weight: 600;
+    }
+
+    /* AQI 區塊無背景，文字跟圓圈顏色跟容器保持一致 */
+    .aqi {
+      display: flex;
+      align-items: center;
+      gap: 0.7em;
+      font-weight: 600;
+      color: inherit;
+    }
+
+    /* AQI 圓圈：透明背景，邊框跟容器邊框同色 */
+    .circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      line-height: 36px;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: inherit;
+      flex-shrink: 0;
+      border: 2.5px solid currentColor;
+      background-color: transparent;
+      user-select: none;
+    }
+
+    /* 狀態顏色 */
+    .good {
+      color: #4CAF50;
+      border-color: #4CAF50;
+      box-shadow: 0 0 14px #4CAF5077;
+    }
+
+    .moderate {
+      color: #FFEB3B;
+      border-color: #FFEB3B;
+      box-shadow: 0 0 14px #FFEB3B77;
+    }
+
+    .unhealthy {
+      color: #FF5722;
+      border-color: #FF5722;
+      box-shadow: 0 0 14px #FF572277;
+    }
+
+    .hazardous {
+      color: #9C27B0;
+      border-color: #9C27B0;
+      box-shadow: 0 0 14px #9C27B077;
+    }
+
+    /* AQI 數值文字固定顏色，不受容器影響 */
+    #aqi-text {
+      color: #222;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* 手機響應 */
+    @media (max-width: 600px) {
+      .weather-aqi-box {
+        flex-direction: column;
+        font-size: 0.9em;
+        padding: 0.7em 1em;
+      }
+      .aqi {
+        gap: 0.5em;
+      }
+      .circle {
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        font-size: 0.85rem;
+        border-width: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="weather-aqi-box" id="weatherBox">
+    <div class="item" id="weather">天氣狀況：--</div>
+    <div class="item" id="temp">氣溫：-- °C</div>
+    <div class="item" id="humidity">相對濕度：-- %</div>
+    <div class="aqi" id="aqi-box">
+      <div id="aqi-text">AQI：--</div>
+      <div class="circle" id="aqi-circle">--</div>
+    </div>
+  </div>
+
+  <script>
+    const emojiMap = {
+      "晴": "☀️",
+      "多雲": "⛅",
+      "晴時多雲": "🌤️",
+      "多雲時晴": "🌥️",
+      "陰": "☁️",
+      "雨": "🌧️",
+      "小雨": "🌦️",
+      "雷雨": "⛈️",
+      "大雨": "🌧️🌧️",
+      "雪": "❄️",
+      "霧": "🌫️"
+    };
+
+    function getAQIStatus(aqi) {
+      if (aqi <= 50) return { status: "良好", class: "good" };
+      if (aqi <= 100) return { status: "普通", class: "moderate" };
+      if (aqi <= 150) return { status: "敏感族群不健康", class: "unhealthy" };
+      if (aqi <= 200) return { status: "所有族群不健康", class: "unhealthy" };
+      if (aqi <= 300) return { status: "非常不健康", class: "hazardous" };
+      return { status: "危害", class: "hazardous" };
+    }
+
+    fetch('https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0001-001?Authorization=CWA-661C0400-2EF2-4448-9AD4-5A1793D5A6B7')
+      .then(res => res.json())
+      .then(data => {
+        const station = data.records.Station.find(s => s.StationId === "C0X100");
+        if (!station) return;
+
+        const obs = station.WeatherElement;
+        const weather = obs.Weather;
+        const emoji = emojiMap[weather] || "🌈";
+
+        document.getElementById("weather").textContent = `天氣狀況：${weather} ${emoji}`;
+        document.getElementById("temp").textContent = `氣溫：${obs.AirTemperature} °C`;
+        document.getElementById("humidity").textContent = `相對濕度：${obs.RelativeHumidity} %`;
+      })
+      .catch(error => console.error("Weather fetch error:", error));
+
+    function fetchAQI() {
+      fetch("https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=477f0cbf-5bb3-4227-a115-c23b3ceb9e66")
+        .then(res => res.json())
+        .then(data => {
+          const tainanData = data.records.find(d => d.sitename === "臺南");
+          if (!tainanData) return;
+
+          const aqi = parseInt(tainanData.aqi);
+          if (isNaN(aqi)) return;
+
+          const { status, class: aqiClass } = getAQIStatus(aqi);
+
+          const box = document.getElementById("weatherBox");
+          const circle = document.getElementById("aqi-circle");
+          const text = document.getElementById("aqi-text");
+
+          circle.textContent = status;    // 圓圈顯示狀態文字，帶顏色和框線
+          text.textContent = `AQI：${aqi}`; // AQI數值文字，固定深色不變色
+
+          box.className = `weather-aqi-box ${aqiClass}`;
+        })
+        .catch(err => console.error("AQI fetch error:", err));
+    }
+
+    fetchAQI();
+    setInterval(fetchAQI, 300000);
+  </script>
+</body>
+</html>
