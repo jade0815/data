@@ -15,19 +15,19 @@
 
     /* 創建 iframe 容器 */
     .iframe-container {
-      width: 550px;
-      height: 1260px;  /* 設置顯示區域的高度 */
+      width: 640px;
+      height: 1230px;  /* 設置顯示區域的高度 */
       position: relative;
       overflow: hidden;  /* 隱藏超出範圍的部分 */
     }
 
     /* iframe 裁切並定位 */
     iframe {
-      width: 400px;
+      width: 480px;
       height: 100%;
       border: none;
       position: absolute;
-      top: -1730px;  /* 調整此值，裁切上方區域 */
+      top: -1680px;  /* 調整此值，裁切上方區域 */
       left: 0;
 	  transform: scale(1.45); /* ✅ 放大倍率，例如 1.2 是放大 20% */
 	  transform-origin: top left; /* ✅ 固定放大時的錨點位置 */
