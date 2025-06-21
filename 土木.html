@@ -10,28 +10,27 @@
       padding: 0;
       overflow: hidden;
       background: #fff;
-	  padding-left: 10px;           /* ✅ 控制向右偏移的距離 */
+	  padding-left: 0px;           /* ✅ 控制向右偏移的距離 */
     }
 
     /* 創建 iframe 容器 */
     .iframe-container {
-      width: 250px;
-      height: 1500px;  /* 設置顯示區域的高度 */
+      width: 550px;
+      height: 1260px;  /* 設置顯示區域的高度 */
       position: relative;
       overflow: hidden;  /* 隱藏超出範圍的部分 */
     }
 
     /* iframe 裁切並定位 */
     iframe {
-      width: 200px;
-      width: 260px;
+      width: 400px;
       height: 100%;
       border: none;
       position: absolute;
-      top: -1800px;  /* 調整此值，裁切上方區域 */
+      top: -1730px;  /* 調整此值，裁切上方區域 */
       left: 0;
-	  transform: scale(1.3); /* ✅ 放大倍率，例如 1.2 是放大 20% */
-	  transform-origin: top center; /* ✅ 固定放大時的錨點位置 */
+	  transform: scale(1.45); /* ✅ 放大倍率，例如 1.2 是放大 20% */
+	  transform-origin: top left; /* ✅ 固定放大時的錨點位置 */
     }
   </style>
 </head>
