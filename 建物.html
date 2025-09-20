@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArcGIS 3D 圖層示例 - 桃園市桃園區建物</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/css/main.css">
+    <script src="https://js.arcgis.com/4.22/"></script>
+    <style>
+        #viewDiv {
+            height: 100vh;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewDiv"></div>
+
+    <script>
+        require([
+            "esri/layers/SceneLayer", 
+            "esri/views/SceneView", 
+            "esri/Map"
+        ], function (SceneLayer, SceneView, Map) {
+            
+            // 創建一個 3D 地圖
+            var map = new Map({
+                basemap: "streets-navigation-vector", // 底圖
+                ground: "world-elevation" // 顯示地形
+            });
+
+            // 創建 SceneLayer 並設置過濾條件 (針對桃園市建物模型)
+            var layer = new SceneLayer({
+                url: "https://i3s.nlsc.gov.tw/building/i3s/SceneServer/layers/7", // 桃園市建物模型
+                definitionExpression: "Type_Toit = 'plat' AND H_MAX <= 20" // 只顯示符合條件的建物
+            });
+
+            map.add(layer); // 添加到地圖中
+
+            // 創建 3D 視圖
+            var view = new SceneView({
+                container: "viewDiv", // 目標容器
+                map: map, // 將地圖添加到視圖
+                center: [121.296, 24.993], // 桃園市桃園區的經緯度
+                zoom: 15 // 設置縮放級別，適當調整以達到最佳視圖
+            });
+
+            // 可選：設置視圖的初始觀察角度
+            view.camera = {
+                position: {
+                    x: 121.296,  // 經度
+                    y: 24.993,   // 緯度
+                    z: 1000      // 高度 (調整至適合的視角)
+                },
+                tilt: 45, // 設置傾斜角度
+                heading: 0  // 設置航向角度
+            };
+        });
+    </script>
+</body>
+</html> 
